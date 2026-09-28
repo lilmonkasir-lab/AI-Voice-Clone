@@ -3,29 +3,48 @@
 <title>Chatterbox Turbo</title>
 <style>
 body{margin:0;background:#08090d;color:#f4f5f7;font:15px Segoe UI,Arial;padding:35px}
-.wrap{max-width:900px;margin:auto}.card{background:#11131a;border:1px solid #292d39;border-radius:18px;padding:22px;margin:16px 0}
-textarea{width:100%;min-height:180px;background:#171a23;color:white;border:1px solid #292d39;border-radius:12px;padding:14px;box-sizing:border-box}
-input{width:100%;padding:12px;box-sizing:border-box;background:#171a23;color:#aaa;border:1px solid #292d39;border-radius:12px}
+.wrap{max-width:960px;margin:auto}.card{background:#11131a;border:1px solid #292d39;border-radius:18px;padding:22px;margin:16px 0}
+textarea{width:100%;min-height:170px;background:#171a23;color:white;border:1px solid #292d39;border-radius:12px;padding:14px;box-sizing:border-box;font-size:15px}
+input,.preset select{padding:12px;box-sizing:border-box;background:#171a23;color:#ccc;border:1px solid #292d39;border-radius:12px;width:100%}
 button,.download{border:0;border-radius:10px;padding:11px 15px;background:#7c5cff;color:white;font-weight:700;cursor:pointer;text-decoration:none}
-button:hover,.download:hover{background:#9a82ff}.tags{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 18px}.tag{background:#171a23}
+button:hover,.download:hover{background:#9a82ff}
 .status{color:#969cab;margin-top:14px;word-break:break-word}.good{color:#45d483}.bad{color:#ff5f6d}
 audio{width:100%;margin-top:10px}.downloads{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 .hint{font-size:12px;color:#969cab;margin-top:7px}label{display:block;font-weight:700;margin:14px 0 8px}
+/* --- tag studio --- */
+.tagstudio{background:linear-gradient(135deg,#171225,#12141d);border:1px solid #383046;border-radius:14px;padding:14px;margin:10px 0 16px}
+.tscat{font-size:12px;font-weight:700;color:#b9b3d6;margin:12px 0 8px;text-transform:uppercase;letter-spacing:.6px}
+.tscat:first-child{margin-top:0}
+chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:0;background:#1d1f2c;border:1px solid #34384c;border-radius:10px;overflow:hidden;transition:border-color .15s}
+.chip:hover{border-color:#7c5cff}
+.chip .ins{background:none;border:0;color:#f4f5f7;padding:8px 10px;cursor:pointer;font-weight:600;display:flex;gap:6px;align-items:center;font-size:13px}
+.chip .ins:hover{color:#b9a5ff;background:none}
+.chip .play{background:#262a3b;border:0;border-left:1px solid #34384c;color:#9aa2bd;padding:8px 9px;cursor:pointer;font-size:12px}
+.chip .play:hover{color:#fff;background:#2f3550}
+.chip .play:disabled{opacity:.4;cursor:default}
+.preset{display:flex;gap:8px;align-items:center;margin-top:12px}
+.preset button{white-space:nowrap;font-size:13px;padding:9px 12px}
+#tagwarn{display:none;margin-top:8px;background:#3a2b12;border:1px solid #7d6118;color:#f3c96b;font-size:12.5px;border-radius:10px;padding:9px 12px;white-space:pre-wrap}
+#tagok{display:none;margin-top:8px;color:#45d483;font-size:12px}
+.row{display:flex;gap:10px;align-items:center}
 </style></head><body><div class="wrap">
-<h1>🎙️ Chatterbox Turbo</h1><div style="color:#969cab">Local voice generation • WAV + MP3</div>
+<h1>🎙️ Chatterbox Turbo</h1><div style="color:#969cab">Local voice generation • WAV + MP3 • full paralinguistic tag studio</div>
 <div class="card">
-<label>TEXT</label><textarea id="text">Hi there, Sarah here from MochaFone calling you back [chuckle], have you got one minute to chat about the billing issue?</textarea>
-<label>PARALINGUISTIC TAGS</label><div class="tags">
-<button class="tag" onclick="tag('[chuckle]')">[Chuckle]</button>
-<button class="tag" onclick="tag('[laugh]')">[Laugh]</button>
-<button class="tag" onclick="tag('[cough]')">[Cough]</button>
-<button class="tag" onclick="tag('[sigh]')">[Sigh]</button>
-<button class="tag" onclick="tag('[gasp]')">[Gasp]</button>
-<button class="tag" onclick="tag('[groan]')">[Groan]</button>
-<button class="tag" onclick="tag('[sniff]')">[Sniff]</button>
-<button class="tag" onclick="tag('[clear throat]')">[Clear throat]</button>
-<button class="tag" onclick="tag('[breath]')">[Breath]</button>
-</div><div class="hint">Tags are inserted at the cursor. Actual support depends on the Chatterbox model.</div>
+<div class="row"><label style="margin:0">TEXT</label>
+<span style="flex:1"></span>
+<button id="clearbtn" style="background:#262a3b;font-weight:600;font-size:12px;padding:7px 11px" onclick="document.getElementById('text').value='';validateTags()">Clear</button></div>
+<textarea id="text" oninput="validateTags()">Hi there, Sarah here from MochaFone calling you back [chuckle], have you got one minute to chat about the billing issue?</textarea>
+<div id="tagwarn"></div>
+<div id="tagok"></div>
+
+<label>PARALINGUISTIC TAGS</label>
+<div class="tagstudio" id="tagstudio"><div class="hint" style="margin:0">Loading tag library…</div></div>
+<div class="preset">
+<select id="preset"></select>
+<button onclick="usePreset()">Use script</button>
+</div>
+
 <label>REFERENCE VOICE</label><input id="ref" type="file" accept="audio/*">
 <div class="hint">At least <b>5 seconds</b> of clear speech, one speaker, no background music. WAV/MP3/M4A/WebM accepted (10-20s is ideal).</div>
 <br><br><button id="go" onclick="generate()">Generate</button>
@@ -36,26 +55,82 @@ audio{width:100%;margin-top:10px}.downloads{display:flex;gap:10px;flex-wrap:wrap
 <a id="wav" class="download" download>⬇ Download WAV</a>
 <a id="mp3" class="download" download>⬇ Download MP3</a></div></div>
 <div class="card" id="err" style="display:none;color:#ff8d97"></div>
+<audio id="prevaudio" style="display:none"></audio>
 </div>
 <script>
 const $=id=>document.getElementById(id);
-function tag(t){let x=$("text"),a=x.selectionStart,b=x.selectionEnd;x.value=x.value.slice(0,a)+(a&&!/\s$/.test(x.value.slice(0,a))?" ":"")+t+" "+x.value.slice(b);x.focus()}
+let TAGS=[], KNOWN=new Set(), PRESETS=[];
+
+/* ---------- tag insertion ---------- */
+function insertTag(t){let x=$("text"),a=x.selectionStart??x.value.length,b=x.selectionEnd??a;
+  x.value=x.value.slice(0,a)+(a&&!/\s$/.test(x.value.slice(0,a))?" ":"")+t+" "+x.value.slice(b);
+  x.focus(); validateTags();}
+
+/* ---------- live tag validation ---------- */
+function validateTags(){
+  let v=$("text").value, found=v.match(/\[[^\[\]]*\]/g)||[];
+  let unknown=found.filter(t=>!KNOWN.has(t));
+  let known=found.filter(t=>KNOWN.has(t));
+  if(unknown.length){
+    $("tagok").style.display="none"; $("tagwarn").style.display="block";
+    $("tagwarn").textContent="⚠ These will be read aloud as words (not real tags):\n"+[...new Set(unknown)].join(", ");
+  } else {
+    $("tagwarn").style.display="none";
+    if(known.length){ $("tagok").style.display="block"; $("tagok").textContent="✓ "+[...new Set(known)].join("  ")+" — all valid tags"; }
+    else $("tagok").style.display="none";
+  }
+}
+
+/* ---------- build palette + presets ---------- */
+async function loadTags(){
+  try{
+    let r=await fetch("/api/tags"), d=await r.json();
+    TAGS=d.tags; PRESETS=d.presets;
+    TAGS.forEach(t=>KNOWN.add(t.tag));
+    let html="";
+    for(const cat in d.categories){
+      html+=`<div class="tscat">${d.categories[cat]}</div><chips>`;
+      for(const t of TAGS.filter(x=>x.category===cat)){
+        html+=`<span class="chip" title="${t.desc}\nInserts: ${t.tag}">
+          <button class="ins" onclick="insertTag('${t.tag}')">${t.emoji} ${t.label}</button>
+          <button class="play" data-tag="${t.tag}" title="Preview with built-in voice" onclick="preview(this,'${t.tag}')">▶</button>
+        </span>`;
+      }
+      html+="</chips>";
+    }
+    $("tagstudio").innerHTML=html;
+    let ps=$("preset"); PRESETS.forEach((p,i)=>{let o=document.createElement("option");o.value=i;o.textContent=p.label;ps.appendChild(o)});
+    validateTags();
+  }catch(e){ $("tagstudio").innerHTML=`<div class="hint">Tag library unavailable (server offline?)</div>`; }
+}
+function usePreset(){let p=PRESETS[+$("preset").value];$("text").value=p.text;$("text").focus();validateTags();}
+
+/* ---------- tag preview (built-in voice, cached server-side) ---------- */
+async function preview(btn, tag){
+  let orig=btn.textContent; btn.textContent="⏳"; btn.disabled=true;
+  document.querySelectorAll(".chip .play").forEach(b=>{if(b!==btn&&b.textContent==="⏸")b.textContent="▶"});
+  try{
+    let r=await fetch("/api/tag-preview",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tag})});
+    let d=await r.json(); if(!r.ok) throw Error(d.error);
+    let a=$("prevaudio"); a.src=d.file+"?"+Date.now();
+    a.onended=()=>btn.textContent=orig;
+    a.onpause=()=>btn.textContent=orig;
+    a.onplay=()=>btn.textContent="⏸";
+    a.play().catch(()=>{btn.textContent=orig});
+    btn.onclick=()=>{ a.paused? a.play() : a.pause(); };
+  }catch(e){ alert("Preview failed: "+e.message); }
+  finally{ btn.disabled=false; if(btn.textContent==="⏳")btn.textContent=orig; }
+}
+
+/* ---------- status + generate ---------- */
 async function status(){
   try{
     let r=await fetch("/api/status"),d=await r.json();
-    if(d.error){
-      $("status").innerHTML="Model failed to load:<br>"+d.error;
-      $("status").className="status bad";
-      setTimeout(status,5000);
-    }else if(d.ready){
-      $("status").textContent=d.cuda?"Model ready • "+d.gpu:"Model ready • CPU mode";
-      $("status").className="status good";
-    }else{
-      $("status").textContent="Loading model... (first run downloads ~2GB, can take a while)";
-      setTimeout(status,2000);
-    }
+    if(d.error){ $("status").innerHTML="Model failed to load:<br>"+d.error; $("status").className="status bad"; setTimeout(status,5000);}
+    else if(d.ready){ $("status").textContent=d.cuda?"Model ready • "+d.gpu:"Model ready • CPU mode"; $("status").className="status good"; }
+    else{ $("status").textContent="Loading model... (first run downloads ~2GB, can take a while)"; setTimeout(status,2000); }
   }catch{ $("status").textContent="Server unavailable"; $("status").className="status bad"; setTimeout(status,3000); }
 }
-async function generate(){let f=$("ref").files[0],t=$("text").value.trim();$("err").style.display="none";if(!t||!f){$("err").textContent="Enter text and choose a reference audio file.";$("err").style.display="block";return}let fd=new FormData();fd.append("text",t);fd.append("reference",f);$("go").disabled=true;$("go").textContent="Generating...";$("status").textContent="Generating audio...";try{let r=await fetch("/api/generate",{method:"POST",body:fd}),d=await r.json();if(!r.ok)throw Error(d.error);$("audio").src=d.file+"?"+Date.now();$("wav").href=d.file;$("wav").download=d.file.split("/").pop();let m=await fetch("/api/mp3",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({file:d.file.split("/").pop()})});let md=await m.json();if(m.ok){$("mp3").href=md.file;$("mp3").download=md.file.split("/").pop()}else{$("mp3").style.display="none"}$("result").style.display="block";$("status").textContent="Done 🎉";$("status").className="status good"}catch(e){$("err").textContent=e.message;$("err").style.display="block";$("status").textContent="Generation failed";$("status").className="status bad"}finally{$("go").disabled=false;$("go").textContent="Generate"}}
-status();
+async function generate(){let f=$("ref").files[0],t=$("text").value.trim();$("err").style.display="none";if(!t||!f){$("err").textContent="Enter text and choose a reference audio file.";$("err").style.display="block";return}let fd=new FormData();fd.append("text",t);fd.append("reference",f);$("go").disabled=true;$("go").textContent="Generating...";$("status").textContent="Generating audio...";try{let r=await fetch("/api/generate",{method:"POST",body:fd}),d=await r.json();if(!r.ok)throw Error(d.error);$("audio").src=d.file+"?"+Date.now();$("wav").href=d.file;$("wav").download=d.file.split("/").pop();let m=await fetch("/api/mp3",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({file:d.file.split("/").pop()})});let md=await m.json();if(m.ok){$("mp3").href=md.file;$("mp3").download=md.file.split("/").pop();$("mp3").style.display=""}else{$("mp3").style.display="none"}$("result").style.display="block";$("status").textContent="Done 🎉";$("status").className="status good"}catch(e){$("err").textContent=e.message;$("err").style.display="block";$("status").textContent="Generation failed";$("status").className="status bad"}finally{$("go").disabled=false;$("go").textContent="Generate"}}
+status(); loadTags();
 </script></body></html>
