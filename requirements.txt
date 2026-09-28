@@ -1,0 +1,14 @@
+# Pinned to a verified-working Chatterbox Turbo stack.
+# (Unpinned installs were pulling breaking major-version updates -
+# e.g. huggingface_hub 1.x rejects anonymous downloads the way older
+# chatterbox releases request them, so the model download/load failed.)
+flask==3.1.3
+torch==2.6.0
+torchaudio==2.6.0
+chatterbox-tts==0.1.7
+transformers==5.2.0
+huggingface_hub>=1.0,<2
+numpy<2
+# Bundled ffmpeg so MP3 export + reading phone-recorded audio (m4a/webm/ogg)
+# works out of the box, no manual FFmpeg install needed.
+imageio-ffmpeg==0.6.0

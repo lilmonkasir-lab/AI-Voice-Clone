@@ -1,0 +1,61 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chatterbox Turbo</title>
+<style>
+body{margin:0;background:#08090d;color:#f4f5f7;font:15px Segoe UI,Arial;padding:35px}
+.wrap{max-width:900px;margin:auto}.card{background:#11131a;border:1px solid #292d39;border-radius:18px;padding:22px;margin:16px 0}
+textarea{width:100%;min-height:180px;background:#171a23;color:white;border:1px solid #292d39;border-radius:12px;padding:14px;box-sizing:border-box}
+input{width:100%;padding:12px;box-sizing:border-box;background:#171a23;color:#aaa;border:1px solid #292d39;border-radius:12px}
+button,.download{border:0;border-radius:10px;padding:11px 15px;background:#7c5cff;color:white;font-weight:700;cursor:pointer;text-decoration:none}
+button:hover,.download:hover{background:#9a82ff}.tags{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 18px}.tag{background:#171a23}
+.status{color:#969cab;margin-top:14px;word-break:break-word}.good{color:#45d483}.bad{color:#ff5f6d}
+audio{width:100%;margin-top:10px}.downloads{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.hint{font-size:12px;color:#969cab;margin-top:7px}label{display:block;font-weight:700;margin:14px 0 8px}
+</style></head><body><div class="wrap">
+<h1>🎙️ Chatterbox Turbo</h1><div style="color:#969cab">Local voice generation • WAV + MP3</div>
+<div class="card">
+<label>TEXT</label><textarea id="text">Hi there, Sarah here from MochaFone calling you back [chuckle], have you got one minute to chat about the billing issue?</textarea>
+<label>PARALINGUISTIC TAGS</label><div class="tags">
+<button class="tag" onclick="tag('[chuckle]')">[Chuckle]</button>
+<button class="tag" onclick="tag('[laugh]')">[Laugh]</button>
+<button class="tag" onclick="tag('[cough]')">[Cough]</button>
+<button class="tag" onclick="tag('[sigh]')">[Sigh]</button>
+<button class="tag" onclick="tag('[gasp]')">[Gasp]</button>
+<button class="tag" onclick="tag('[groan]')">[Groan]</button>
+<button class="tag" onclick="tag('[sniff]')">[Sniff]</button>
+<button class="tag" onclick="tag('[clear throat]')">[Clear throat]</button>
+<button class="tag" onclick="tag('[breath]')">[Breath]</button>
+</div><div class="hint">Tags are inserted at the cursor. Actual support depends on the Chatterbox model.</div>
+<label>REFERENCE VOICE</label><input id="ref" type="file" accept="audio/*">
+<div class="hint">At least <b>5 seconds</b> of clear speech, one speaker, no background music. WAV/MP3/M4A/WebM accepted (10-20s is ideal).</div>
+<br><br><button id="go" onclick="generate()">Generate</button>
+<div class="status" id="status">Checking model...</div>
+</div>
+<div class="card" id="result" style="display:none"><h2>Generated audio 🔊</h2>
+<audio id="audio" controls></audio><div class="downloads">
+<a id="wav" class="download" download>⬇ Download WAV</a>
+<a id="mp3" class="download" download>⬇ Download MP3</a></div></div>
+<div class="card" id="err" style="display:none;color:#ff8d97"></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+function tag(t){let x=$("text"),a=x.selectionStart,b=x.selectionEnd;x.value=x.value.slice(0,a)+(a&&!/\s$/.test(x.value.slice(0,a))?" ":"")+t+" "+x.value.slice(b);x.focus()}
+async function status(){
+  try{
+    let r=await fetch("/api/status"),d=await r.json();
+    if(d.error){
+      $("status").innerHTML="Model failed to load:<br>"+d.error;
+      $("status").className="status bad";
+      setTimeout(status,5000);
+    }else if(d.ready){
+      $("status").textContent=d.cuda?"Model ready • "+d.gpu:"Model ready • CPU mode";
+      $("status").className="status good";
+    }else{
+      $("status").textContent="Loading model... (first run downloads ~2GB, can take a while)";
+      setTimeout(status,2000);
+    }
+  }catch{ $("status").textContent="Server unavailable"; $("status").className="status bad"; setTimeout(status,3000); }
+}
+async function generate(){let f=$("ref").files[0],t=$("text").value.trim();$("err").style.display="none";if(!t||!f){$("err").textContent="Enter text and choose a reference audio file.";$("err").style.display="block";return}let fd=new FormData();fd.append("text",t);fd.append("reference",f);$("go").disabled=true;$("go").textContent="Generating...";$("status").textContent="Generating audio...";try{let r=await fetch("/api/generate",{method:"POST",body:fd}),d=await r.json();if(!r.ok)throw Error(d.error);$("audio").src=d.file+"?"+Date.now();$("wav").href=d.file;$("wav").download=d.file.split("/").pop();let m=await fetch("/api/mp3",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({file:d.file.split("/").pop()})});let md=await m.json();if(m.ok){$("mp3").href=md.file;$("mp3").download=md.file.split("/").pop()}else{$("mp3").style.display="none"}$("result").style.display="block";$("status").textContent="Done 🎉";$("status").className="status good"}catch(e){$("err").textContent=e.message;$("err").style.display="block";$("status").textContent="Generation failed";$("status").className="status bad"}finally{$("go").disabled=false;$("go").textContent="Generate"}}
+status();
+</script></body></html>
